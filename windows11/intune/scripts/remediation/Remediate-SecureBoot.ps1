@@ -7,7 +7,10 @@
       2. Writes a structured registry key for helpdesk/reporting queries
       3. Optionally triggers a toast notification to the logged-on user
 .NOTES
-    Run as: SYSTEM (64-bit)
+    Author  : Marius Skovli
+    Date    : 25.01.2026
+    Version : 1.0
+    Run as  : SYSTEM (64-bit)
     Platform: Windows 11
 #>
 

@@ -14,6 +14,9 @@
 .PARAMETER ClientId
     App registration client ID (if using app-only auth).
 .NOTES
+    Author  : Marius Skovli
+    Date    : 28.01.2026
+    Version : 1.0
     For delegated auth (interactive), run as a user with Intune read access.
 #>
 [CmdletBinding()]

@@ -5,7 +5,10 @@
     Checks Secure Boot status, TPM state, firmware type, and Code Integrity.
     Exits 0 (compliant) or 1 (non-compliant / remediation needed).
 .NOTES
-    Run as: SYSTEM (64-bit)
+    Author  : Marius Skovli
+    Date    : 25.01.2026
+    Version : 1.0
+    Run as  : SYSTEM (64-bit)
     Platform: Windows 11
 #>
 

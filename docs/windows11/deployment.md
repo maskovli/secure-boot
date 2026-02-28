@@ -1,5 +1,11 @@
 # Windows 11 — Secure Boot Deployment Guide (Intune)
 
+> **Author:** Marius Skovli
+> **Created:** 20.01.2026
+> **Last updated:** 06.02.2026
+
+This guide walks through deploying Secure Boot compliance, the 2023 certificate update (June 2026 deadline), Device Guard / VBS, and the inventory Proactive Remediation against an Intune-managed Windows 11 fleet.
+
 ## Prerequisites
 
 - Intune tenant with enrolled Windows 11 devices

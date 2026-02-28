@@ -15,6 +15,10 @@
     Sti for CSV-output. Standard: .\SecureBootInventory_<dato>.csv
 .PARAMETER TenantId
     Entra ID tenant-ID (valgfri).
+.NOTES
+    Author  : Marius Skovli
+    Date    : 06.02.2026
+    Version : 1.0
 #>
 [CmdletBinding()]
 param(

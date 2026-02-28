@@ -1,5 +1,11 @@
 # Windows 11 — Secure Boot Troubleshooting
 
+> **Author:** Marius Skovli
+> **Created:** 22.01.2026
+> **Last updated:** 13.02.2026
+
+Common issues and quick diagnostics for Secure Boot, TPM, VBS / HVCI, Credential Guard, and the 2023 certificate update on Intune-managed Windows 11 devices.
+
 ## Quick Diagnostics
 
 Run this on the affected device (as admin) to get a full picture:

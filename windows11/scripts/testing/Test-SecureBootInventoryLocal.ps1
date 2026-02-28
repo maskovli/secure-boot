@@ -19,6 +19,10 @@
     psexec -s -i powershell.exe -ExecutionPolicy Bypass -File .\Test-SecureBootInventoryLocal.ps1
 
 .NOTES
+    Author  : Marius Skovli
+    Date    : 13.02.2026
+    Version : 1.0
+
     Forventet thumbprints:
       Windows UEFI CA 2011 : 580A6F4CC4E4B669B9EBDC1B2B3E087B80D0678D (db)
       Windows UEFI CA 2023 : 45A0FA32604773C82433C3B7D59E7466B3AC0C67 (db)

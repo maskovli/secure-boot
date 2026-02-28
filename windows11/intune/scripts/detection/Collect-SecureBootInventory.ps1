@@ -8,7 +8,10 @@
     Output is captured by Intune as preRemediationDetectionScriptOutput and
     queryable via Graph API on deviceHealthScripts/{id}/deviceRunStates.
 .NOTES
-    Run as: SYSTEM (64-bit)
+    Author  : Marius Skovli
+    Date    : 03.02.2026
+    Version : 1.0
+    Run as  : SYSTEM (64-bit)
     Paired with: NoOp.ps1 (remediation)
 
     Certificate thumbprints (SHA-1):
