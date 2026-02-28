@@ -1,0 +1,91 @@
+// =====================================================================
+// CMPivot query - Secure Boot certificate inventory
+// =====================================================================
+// Author      : Marius Skovli
+// Date        : 26.02.2026
+// Version     : 1.0
+// Target      : Server collection that has the Secure Boot CI deployed
+// Prerequisite: Detect-SecureBootInventory-CI.ps1 has run at least once on
+//               each target (it populates HKLM:\SOFTWARE\SecureBootInventory)
+//
+// What this gives you
+// -------------------
+// CMPivot runs the query against live clients in parallel (no waiting for
+// Hardware Inventory cycles) and aggregates results in the console. This is
+// the fastest way to:
+//   - Spot-check progress after deploying the 2023 cert update policy
+//   - Identify the subset of servers still on the 2011 CA before June 2026
+//   - Validate that the CI evaluation actually wrote registry data
+//
+// Limitations
+// -----------
+// CMPivot only returns from currently-online clients (offline = no data).
+// For full-fleet historical reporting use Get-SecureBootFromConfigMgr.ps1
+// against the SQL views (after enabling registry inventory in Hardware
+// Inventory client settings).
+//
+// How to run
+// ----------
+// 1. Open the ConfigMgr console
+// 2. Right-click the target collection -> "Start CMPivot"
+// 3. Paste this query and press Run
+// 4. Export results from CMPivot toolbar if needed
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// Query 1 - Per-device CertStatus summary (most common use)
+// Returns: Device, CertStatus, SecureBoot, FirmwareType, LastEvaluation
+// ---------------------------------------------------------------------
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Property in ('CertStatus','SecureBoot','FirmwareType','LastEvaluation')
+| summarize CertStatus      = anyif(Value, Property == 'CertStatus'),
+            SecureBoot      = anyif(Value, Property == 'SecureBoot'),
+            FirmwareType    = anyif(Value, Property == 'FirmwareType'),
+            LastEvaluation  = anyif(Value, Property == 'LastEvaluation')
+            by Device
+| order by CertStatus asc, Device asc
+
+
+// ---------------------------------------------------------------------
+// Query 2 - Group counts by CertStatus (executive summary)
+// Comment out Query 1 above and uncomment this block to use.
+// ---------------------------------------------------------------------
+// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+// | where Property == 'CertStatus'
+// | summarize Count = count() by Value
+// | project CertStatus = Value, Count
+// | order by Count desc
+
+
+// ---------------------------------------------------------------------
+// Query 3 - Servers that need the 2023 cert update (action list)
+// ---------------------------------------------------------------------
+// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+// | where Property == 'CertStatus' and Value == 'NeedsUpdate'
+// | project Device, CertStatus = Value
+
+
+// ---------------------------------------------------------------------
+// Query 4 - Servers where the CI never evaluated (no registry key)
+// Combine with Query 1 results to find clients missing the baseline
+// or where the discovery script failed silently.
+// ---------------------------------------------------------------------
+// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+// | summarize HasInventory = count() by Device
+// | where HasInventory == 0
+
+
+// ---------------------------------------------------------------------
+// Query 5 - Full per-device cert thumbprint matrix
+// Useful when verifying which specific cert is missing on individual hosts.
+// ---------------------------------------------------------------------
+// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+// | where Property in ('DB_Has2011Cert','DB_Has2023Cert','KEK_Has2011Cert','KEK_Has2023Cert','CertStatus')
+// | summarize DB_2011  = anyif(Value, Property == 'DB_Has2011Cert'),
+//             DB_2023  = anyif(Value, Property == 'DB_Has2023Cert'),
+//             KEK_2011 = anyif(Value, Property == 'KEK_Has2011Cert'),
+//             KEK_2023 = anyif(Value, Property == 'KEK_Has2023Cert'),
+//             Status   = anyif(Value, Property == 'CertStatus')
+//             by Device
+// | order by Status asc, Device asc
