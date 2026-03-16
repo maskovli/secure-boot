@@ -1,0 +1,146 @@
+// =====================================================================
+// Sentinel / Log Analytics KQL pack - Secure Boot certificate inventory
+// =====================================================================
+// Author      : Marius Skovli
+// Date        : 14.03.2026
+// Version     : 1.0
+// Table       : SecureBootInventory_CL
+// Source      : Send-SecureBootInventoryToLogAnalytics.ps1 (Intune PR)
+//
+// What this pack contains
+// -----------------------
+// 9 ready-to-use queries grouped by purpose. Each block is self-contained
+// and can be pasted into Logs / Sentinel / a Workbook tile.
+//
+// Queries 1-3 are dashboard tiles (counts, distributions, trend).
+// Queries 4-5 are operational (action list, stale devices).
+// Queries 6-7 are hunting / correlation (joins with Intune device data).
+// Queries 8-9 are alerting candidates (analytic rule logic).
+//
+// All queries dedupe to the latest record per device using arg_max(),
+// so the table can grow indefinitely without skewing the numbers.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// 1. Latest state per device (foundational - other queries build on this)
+// Use as a saved function: .create-or-alter function SecureBootLatest()
+// ---------------------------------------------------------------------
+SecureBootInventory_CL
+| summarize arg_max(TimeGenerated, *) by DeviceName
+| project TimeGenerated, DeviceName, CertStatus, SecureBoot, FirmwareType,
+          DB_Has2023Cert, KEK_Has2023Cert, DB_Has2011Cert, KEK_Has2011Cert,
+          OSVersion, Manufacturer, Model, AzureADDeviceId
+
+
+// ---------------------------------------------------------------------
+// 2. CertStatus distribution (executive summary tile)
+// Pie chart in workbook
+// ---------------------------------------------------------------------
+// SecureBootInventory_CL
+// | summarize arg_max(TimeGenerated, CertStatus) by DeviceName
+// | summarize Devices = count() by CertStatus
+// | order by Devices desc
+
+
+// ---------------------------------------------------------------------
+// 3. UpToDate trend over time (line chart - track 2023-cert rollout)
+// Useful to show progress against the June 2026 deadline
+// ---------------------------------------------------------------------
+// SecureBootInventory_CL
+// | summarize arg_max(TimeGenerated, CertStatus) by DeviceName, bin(TimeGenerated, 1d)
+// | summarize UpToDate    = countif(CertStatus == 'UpToDate'),
+//             NeedsUpdate = countif(CertStatus == 'NeedsUpdate'),
+//             Unknown     = countif(CertStatus == 'Unknown'),
+//             NotApplicable = countif(CertStatus == 'NotApplicable')
+//             by bin(TimeGenerated, 1d)
+// | order by TimeGenerated asc
+// | render timechart
+
+
+// ---------------------------------------------------------------------
+// 4. Action list - devices that still need 2023 cert (sorted by OS, model)
+// Export this for the helpdesk / migration team
+// ---------------------------------------------------------------------
+// SecureBootInventory_CL
+// | summarize arg_max(TimeGenerated, *) by DeviceName
+// | where CertStatus == 'NeedsUpdate'
+// | project DeviceName, OSVersion, Manufacturer, Model, SerialNumber,
+//           DB_Has2011Cert, KEK_Has2011Cert, LastSeen = TimeGenerated
+// | order by Manufacturer asc, Model asc, DeviceName asc
+
+
+// ---------------------------------------------------------------------
+// 5. Stale devices - haven't reported in N days (script broken / device offline)
+// Adjust 7d threshold based on your PR run schedule
+// ---------------------------------------------------------------------
+// SecureBootInventory_CL
+// | summarize LastSeen = max(TimeGenerated) by DeviceName
+// | where LastSeen < ago(7d)
+// | extend DaysSinceLastSeen = datetime_diff('day', now(), LastSeen)
+// | order by LastSeen asc
+
+
+// ---------------------------------------------------------------------
+// 6. Cross-reference with Intune device inventory (Sentinel Intune connector)
+// Requires the Microsoft Intune data connector enabled in Sentinel
+// Joins on AzureADDeviceId for richer per-device context
+// ---------------------------------------------------------------------
+// SecureBootInventory_CL
+// | summarize arg_max(TimeGenerated, *) by DeviceName
+// | where CertStatus == 'NeedsUpdate'
+// | join kind=leftouter (
+//     IntuneDevices
+//     | where TimeGenerated > ago(7d)
+//     | summarize arg_max(TimeGenerated, *) by AzureADDeviceId
+//     | project AzureADDeviceId, UserPrincipalName, EnrolledDateTime, OwnerType, ComplianceState
+// ) on AzureADDeviceId
+// | project DeviceName, UserPrincipalName, ComplianceState, OSVersion,
+//           Manufacturer, Model, EnrolledDateTime
+
+
+// ---------------------------------------------------------------------
+// 7. CertStatus by Manufacturer / Model (find the OEM laggards)
+// Useful when one vendor's firmware is slower to receive the 2023 cert
+// ---------------------------------------------------------------------
+// SecureBootInventory_CL
+// | summarize arg_max(TimeGenerated, *) by DeviceName
+// | summarize Total       = count(),
+//             UpToDate    = countif(CertStatus == 'UpToDate'),
+//             NeedsUpdate = countif(CertStatus == 'NeedsUpdate'),
+//             PercentUpdated = round(100.0 * countif(CertStatus == 'UpToDate') / count(), 1)
+//             by Manufacturer, Model
+// | where Total >= 5
+// | order by PercentUpdated asc
+
+
+// ---------------------------------------------------------------------
+// 8. ANALYTIC RULE candidate - device regressed from UpToDate to NeedsUpdate
+// (Anomaly: 2023 cert disappeared - possible firmware reset or rollback)
+// Schedule every 6h, lookback 24h, severity Medium
+// ---------------------------------------------------------------------
+// let lookback = 24h;
+// SecureBootInventory_CL
+// | where TimeGenerated > ago(lookback)
+// | summarize Statuses = make_list(CertStatus, 100), Times = make_list(TimeGenerated, 100) by DeviceName
+// | where Statuses has 'UpToDate' and Statuses has 'NeedsUpdate'
+// | extend FirstStatus = tostring(Statuses[0]), LastStatus = tostring(Statuses[-1])
+// | where FirstStatus == 'UpToDate' and LastStatus == 'NeedsUpdate'
+// | project DeviceName, FirstStatus, LastStatus, FirstSeen = todatetime(Times[0]), LastSeen = todatetime(Times[-1])
+
+
+// ---------------------------------------------------------------------
+// 9. ANALYTIC RULE candidate - 2026 deadline countdown alert
+// Fires when more than X% of fleet still on 2011 cert with < 60 days to go
+// Schedule daily, severity Medium
+// ---------------------------------------------------------------------
+// let deadline = datetime(2026-06-30);
+// let daysLeft = datetime_diff('day', deadline, now());
+// let threshold = 5.0; // percent
+// SecureBootInventory_CL
+// | summarize arg_max(TimeGenerated, CertStatus) by DeviceName
+// | summarize Total = count(), NeedsUpdate = countif(CertStatus == 'NeedsUpdate')
+// | extend PercentNeedsUpdate = round(100.0 * NeedsUpdate / Total, 1)
+// | extend DaysToDeadline = daysLeft
+// | where PercentNeedsUpdate > threshold and DaysToDeadline < 60
+// | project Total, NeedsUpdate, PercentNeedsUpdate, DaysToDeadline
