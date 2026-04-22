@@ -1,0 +1,47 @@
+{
+  "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+  "displayName": "WIN11-SEC-Secure Boot Compliance",
+  "description": "Enforces Secure Boot, TPM 2.0, UEFI firmware, and Code Integrity on Windows 11 devices.",
+  "osMinimumVersion": "10.0.22000",
+  "activeFirewallRequired": true,
+  "antiSpywareRequired": true,
+  "antivirusRequired": true,
+  "bitLockerEnabled": true,
+  "codeIntegrityEnabled": true,
+  "defenderEnabled": true,
+  "deviceThreatProtectionEnabled": false,
+  "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+  "earlyLaunchAntiMalwareDriverEnabled": false,
+  "mobileOsMaximumVersion": null,
+  "mobileOsMinimumVersion": null,
+  "osMaximumVersion": null,
+  "passwordBlockSimple": true,
+  "passwordExpirationDays": null,
+  "passwordMinimumCharacterSetCount": null,
+  "passwordMinimumLength": null,
+  "passwordMinutesOfInactivityBeforeLock": null,
+  "passwordPreviousPasswordBlockCount": null,
+  "passwordRequired": false,
+  "passwordRequiredToUnlockFromIdle": false,
+  "passwordRequiredType": "deviceDefault",
+  "requireHealthyDeviceReport": false,
+  "rtpEnabled": true,
+  "secureBootEnabled": true,
+  "signatureOutOfDate": false,
+  "storageRequireEncryption": true,
+  "tpmRequired": true,
+  "validOperatingSystemBuildRanges": [],
+  "scheduledActionsForRule": [
+    {
+      "ruleName": "PasswordRequired",
+      "scheduledActionConfigurations": [
+        {
+          "actionType": "block",
+          "gracePeriodHours": 0,
+          "notificationTemplateId": "",
+          "notificationMessageCCList": []
+        }
+      ]
+    }
+  ]
+}

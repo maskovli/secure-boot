@@ -1,0 +1,42 @@
+{
+  "@odata.type": "#microsoft.graph.deviceConfiguration",
+  "displayName": "WIN11-SEC-Device Guard and VBS",
+  "description": "Enables Virtualization-Based Security (VBS), Secure Boot + DMA platform security, and Hypervisor-Protected Code Integrity (HVCI). Start with HVCI in Audit mode, switch to Enforce after driver validation.",
+  "omaSettings": [
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "Enable Virtualization Based Security",
+      "description": "1 = Enable VBS. Requires UEFI Secure Boot and a compatible CPU with hardware virtualization.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceGuard/EnableVirtualizationBasedSecurity",
+      "value": 1
+    },
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "Require Platform Security Features",
+      "description": "3 = Secure Boot + DMA Protection. 1 = Secure Boot only.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceGuard/RequirePlatformSecurityFeatures",
+      "value": 3
+    },
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "Hypervisor Protected Code Integrity (HVCI)",
+      "description": "0 = Disabled, 1 = Enabled with UEFI lock (cannot be disabled without physical access), 2 = Enabled without UEFI lock (Audit mode). Start with 2, move to 1 after driver validation.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceGuard/HypervisorEnforcedCodeIntegrity",
+      "value": 2
+    },
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "Credential Guard",
+      "description": "1 = Enabled with UEFI lock. Protects LSASS/credentials using VBS.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceGuard/LsaCfgFlags",
+      "value": 1
+    },
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "Secure Launch (DRTM)",
+      "description": "1 = Enabled. Requires Intel TXT or AMD SVM/SEV-capable CPU.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceGuard/ConfigureSystemGuardLaunch",
+      "value": 1
+    }
+  ]
+}
