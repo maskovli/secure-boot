@@ -2,11 +2,10 @@
 .SYNOPSIS
     Graph API reporting script — Secure Boot inventory across all Intune-managed Windows 11 devices.
 .DESCRIPTION
-    Queries Microsoft Graph for managed Windows devices and reads the registry key written by
-    the Proactive Remediation script (HKLM:\SOFTWARE\IntuneRemediations\SecureBoot).
-    Outputs a CSV report suitable for export to Excel or Power BI.
+    Uses the deviceCompliancePolicySettingStateSummaries endpoint to retrieve per-device Secure Boot
+    compliance state in two Graph calls (vs. N calls per device). Outputs a CSV report.
 
-    Requires: Microsoft.Graph PowerShell SDK (or Graph API access token)
+    Requires: Microsoft.Graph PowerShell SDK
     Permissions: DeviceManagementManagedDevices.Read.All
 .PARAMETER OutputPath
     Path for the CSV output. Defaults to .\SecureBootInventory_<date>.csv
@@ -36,68 +35,71 @@ if ($ClientId) { $connectParams['ClientId'] = $ClientId }
 Connect-MgGraph @connectParams -NoWelcome
 #endregion
 
-#region — Fetch devices
-Write-Host 'Fetching managed Windows devices from Graph...' -ForegroundColor Cyan
+#region — Get SecureBoot setting state summary
+# Graph: GET /deviceManagement/deviceCompliancePolicySettingStateSummaries?$filter=setting eq 'secureBootEnabled'
+# This returns a summary object with an ID we can use to get per-device states.
+Write-Host 'Looking up Secure Boot compliance setting summary...' -ForegroundColor Cyan
 
-$devices = Get-MgDeviceManagementManagedDevice -Filter "operatingSystem eq 'Windows'" -All `
-    -Property 'id,deviceName,userPrincipalName,osVersion,complianceState,lastSyncDateTime,azureADDeviceId'
+$baseUri = 'https://graph.microsoft.com/v1.0/deviceManagement'
 
-Write-Host "Found $($devices.Count) Windows devices" -ForegroundColor Green
-#endregion
+$summaryResponse = Invoke-MgGraphRequest -Method GET `
+    -Uri "$baseUri/deviceCompliancePolicySettingStateSummaries?`$filter=setting eq 'secureBootEnabled'"
 
-#region — Query per-device Secure Boot setting state from compliance policies
-# SettingStates is a navigation property on deviceCompliancePolicyState — it is NOT
-# returned inline. Must be fetched via the dedicated settingStates endpoint per policy.
-# Graph: GET /deviceManagement/managedDevices/{id}/deviceCompliancePolicyStates/{policyStateId}/settingStates
+$summary = $summaryResponse.value | Select-Object -First 1
 
-$total   = $devices.Count
-$counter = 0
-
-$report = foreach ($device in $devices) {
-    $counter++
-    Write-Progress -Activity 'Querying compliance setting states' `
-        -Status "$counter / $total — $($device.DeviceName)" `
-        -PercentComplete (($counter / $total) * 100)
-
-    $secureBootState = 'Unknown'
-
-    $policyStates = Get-MgDeviceManagementManagedDeviceCompliancePolicyState `
-        -ManagedDeviceId $device.Id -ErrorAction SilentlyContinue
-
-    foreach ($ps in $policyStates) {
-        $settingStates = Get-MgDeviceManagementManagedDeviceCompliancePolicyStateSettingState `
-            -ManagedDeviceId $device.Id `
-            -DeviceCompliancePolicyStateId $ps.Id `
-            -ErrorAction SilentlyContinue
-
-        $sb = $settingStates | Where-Object { $_.Setting -match 'SecureBoot' }
-        if ($sb) {
-            $secureBootState = $sb.State   # compliant | nonCompliant | notApplicable | unknown
-            break
-        }
-    }
-
-    [PSCustomObject]@{
-        DeviceName       = $device.DeviceName
-        UPN              = $device.UserPrincipalName
-        OSVersion        = $device.OsVersion
-        ComplianceState  = $device.ComplianceState
-        LastSync         = $device.LastSyncDateTime
-        SecureBootState  = $secureBootState
-        AzureADDeviceId  = $device.AzureAdDeviceId
-    }
+if (-not $summary) {
+    Write-Warning "No Secure Boot compliance setting summary found. Ensure the compliance policy with 'secureBootEnabled' is assigned and has evaluated at least one device."
+    Disconnect-MgGraph | Out-Null
+    return
 }
 
-Write-Progress -Activity 'Querying compliance setting states' -Completed
+Write-Host "Summary found — ID: $($summary.id)" -ForegroundColor Green
+Write-Host "  Compliant: $($summary.compliantDeviceCount)  NonCompliant: $($summary.nonCompliantDeviceCount)  Unknown: $($summary.unknownDeviceCount)  NotApplicable: $($summary.notApplicableDeviceCount)"
+#endregion
+
+#region — Get per-device setting states (paginated)
+# Graph: GET /deviceManagement/deviceCompliancePolicySettingStateSummaries/{id}/deviceComplianceSettingStates
+Write-Host 'Fetching per-device Secure Boot states...' -ForegroundColor Cyan
+
+$allStates = [System.Collections.Generic.List[object]]::new()
+$nextUri   = "$baseUri/deviceCompliancePolicySettingStateSummaries/$($summary.id)/deviceComplianceSettingStates"
+
+do {
+    $page    = Invoke-MgGraphRequest -Method GET -Uri $nextUri
+    $allStates.AddRange([object[]]$page.value)
+    $nextUri = $page.'@odata.nextLink'
+} while ($nextUri)
+
+Write-Host "Retrieved $($allStates.Count) device setting state records" -ForegroundColor Green
+#endregion
+
+#region — Build report
+# Each state object has: deviceId, deviceName, state, userId, userEmail, userName,
+#   userPrincipalName, deviceModel, setting, settingName, osDescription, osVersion
+$report = $allStates | ForEach-Object {
+    [PSCustomObject]@{
+        DeviceName      = $_.deviceName
+        UPN             = $_.userPrincipalName
+        UserName        = $_.userName
+        OSVersion       = $_.osVersion
+        DeviceModel     = $_.deviceModel
+        SecureBootState = $_.state   # compliant | nonCompliant | notApplicable | unknown | error
+        DeviceId        = $_.deviceId
+    }
+}
 #endregion
 
 #region — Output
-$report | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+$report | Sort-Object SecureBootState, DeviceName |
+    Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+
 Write-Host "Report saved to $OutputPath" -ForegroundColor Green
 
-$summary = $report | Group-Object SecureBootState | Select-Object Name, Count
-Write-Host "`nSummary:" -ForegroundColor Cyan
-$summary | Format-Table -AutoSize
+Write-Host "`nSummary by state:" -ForegroundColor Cyan
+$report | Group-Object SecureBootState |
+    Select-Object @{N='State'; E={$_.Name}}, @{N='Count'; E={$_.Count}} |
+    Sort-Object Count -Descending |
+    Format-Table -AutoSize
 
 Disconnect-MgGraph | Out-Null
 #endregion
