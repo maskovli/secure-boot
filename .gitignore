@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.code-workspace
+
+# PowerShell
+*.ps1xml
+
+# Secrets / exports with potential PII
+**/export/
+*.csv
+*.log
