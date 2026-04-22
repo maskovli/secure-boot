@@ -45,21 +45,37 @@ $devices = Get-MgDeviceManagementManagedDevice -Filter "operatingSystem eq 'Wind
 Write-Host "Found $($devices.Count) Windows devices" -ForegroundColor Green
 #endregion
 
-#region — Query Proactive Remediation results
-# The remediation script writes to HKLM:\SOFTWARE\IntuneRemediations\SecureBoot.
-# We read this via the Intune Device Health Script result endpoint.
-# Graph: GET /deviceManagement/deviceHealthScripts/{id}/deviceRunStates
+#region — Query per-device Secure Boot setting state from compliance policies
+# SettingStates is a navigation property on deviceCompliancePolicyState — it is NOT
+# returned inline. Must be fetched via the dedicated settingStates endpoint per policy.
+# Graph: GET /deviceManagement/managedDevices/{id}/deviceCompliancePolicyStates/{policyStateId}/settingStates
 
-# Alternatively, build report from compliance state + detected apps
-# For this script we use compliance policy state per-device as a proxy
+$total   = $devices.Count
+$counter = 0
 
 $report = foreach ($device in $devices) {
-    $complianceStates = Get-MgDeviceManagementManagedDeviceCompliancePolicyState -ManagedDeviceId $device.Id -ErrorAction SilentlyContinue
+    $counter++
+    Write-Progress -Activity 'Querying compliance setting states' `
+        -Status "$counter / $total — $($device.DeviceName)" `
+        -PercentComplete (($counter / $total) * 100)
 
-    $secureBoot = $complianceStates |
-        Where-Object { $_.SettingStates.Setting -match 'secureboot' } |
-        Select-Object -ExpandProperty SettingStates -ErrorAction SilentlyContinue |
-        Where-Object { $_.Setting -match 'secureboot' }
+    $secureBootState = 'Unknown'
+
+    $policyStates = Get-MgDeviceManagementManagedDeviceCompliancePolicyState `
+        -ManagedDeviceId $device.Id -ErrorAction SilentlyContinue
+
+    foreach ($ps in $policyStates) {
+        $settingStates = Get-MgDeviceManagementManagedDeviceCompliancePolicyStateSettingState `
+            -ManagedDeviceId $device.Id `
+            -DeviceCompliancePolicyStateId $ps.Id `
+            -ErrorAction SilentlyContinue
+
+        $sb = $settingStates | Where-Object { $_.Setting -match 'SecureBoot' }
+        if ($sb) {
+            $secureBootState = $sb.State   # compliant | nonCompliant | notApplicable | unknown
+            break
+        }
+    }
 
     [PSCustomObject]@{
         DeviceName       = $device.DeviceName
@@ -67,10 +83,12 @@ $report = foreach ($device in $devices) {
         OSVersion        = $device.OsVersion
         ComplianceState  = $device.ComplianceState
         LastSync         = $device.LastSyncDateTime
-        SecureBootState  = if ($secureBoot) { $secureBoot.State } else { 'Unknown' }
+        SecureBootState  = $secureBootState
         AzureADDeviceId  = $device.AzureAdDeviceId
     }
 }
+
+Write-Progress -Activity 'Querying compliance setting states' -Completed
 #endregion
 
 #region — Output
