@@ -67,15 +67,24 @@ $report = foreach ($run in $allRuns) {
         UPN                 = $run.managedDevice.userPrincipalName
         OSVersion           = $run.managedDevice.osVersion
         LastRun             = $run.lastStateUpdateDateTime
-        DetectionState      = $run.detectionState      # success | fail | scriptError | pending | notApplicable
+        DetectionState      = $run.detectionState
         SecureBoot          = $parsed.SecureBoot
         FirmwareType        = $parsed.FirmwareType
+        # Sertifikatstatus — nøkkelfelt for 2026-deadline
+        CertStatus          = $parsed.CertStatus          # UpToDate | NeedsUpdate | Unknown | NotApplicable
+        DB_Has2023Cert      = $parsed.DB_Has2023Cert
+        DB_Has2011Cert      = $parsed.DB_Has2011Cert
+        KEK_Has2023Cert     = $parsed.KEK_Has2023Cert
+        KEK_Has2011Cert     = $parsed.KEK_Has2011Cert
+        # TPM
         TPMPresent          = $parsed.TPMPresent
         TPMReady            = $parsed.TPMReady
         TPMSpecVersion      = $parsed.TPMSpecVersion
+        # VBS / HVCI / Credential Guard
         VBSStatus           = $parsed.VBSStatus
         HVCIStatus          = $parsed.HVCIStatus
         CredentialGuard     = $parsed.CredentialGuardStatus
+        # Hardware
         Manufacturer        = $parsed.Manufacturer
         Model               = $parsed.Model
         SerialNumber        = $parsed.SerialNumber
@@ -92,7 +101,12 @@ $report | Sort-Object SecureBoot, DeviceName |
 
 Write-Host "Rapport lagret: $OutputPath" -ForegroundColor Green
 
-Write-Host "`nOppsummering — Secure Boot:" -ForegroundColor Cyan
+Write-Host "`nOppsummering — Sertifikatstatus (2026-deadline):" -ForegroundColor Yellow
+$report | Group-Object CertStatus |
+    Select-Object @{N='CertStatus'; E={$_.Name}}, @{N='Antall'; E={$_.Count}} |
+    Sort-Object Antall -Descending | Format-Table -AutoSize
+
+Write-Host "Oppsummering — Secure Boot:" -ForegroundColor Cyan
 $report | Group-Object SecureBoot |
     Select-Object @{N='SecureBoot'; E={$_.Name}}, @{N='Antall'; E={$_.Count}} |
     Sort-Object Antall -Descending | Format-Table -AutoSize
