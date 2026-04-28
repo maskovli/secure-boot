@@ -6,7 +6,7 @@
     Collect-SecureBootInventory-scriptet og parser JSON-outputen til en CSV-rapport.
 
     Requires: Microsoft.Graph PowerShell SDK
-    Permissions: DeviceManagementConfiguration.Read.All
+    Permissions: DeviceManagementScripts.Read.All
                  DeviceManagementManagedDevices.Read.All
 .PARAMETER ScriptId
     ID på Proactive Remediation (deviceHealthScript) i Intune.
@@ -27,7 +27,7 @@ param(
 )
 
 #region — Auth
-$connectParams = @{ Scopes = @('DeviceManagementConfiguration.Read.All', 'DeviceManagementManagedDevices.Read.All') }
+$connectParams = @{ Scopes = @('DeviceManagementScripts.Read.All', 'DeviceManagementManagedDevices.Read.All') }
 if ($TenantId) { $connectParams['TenantId'] = $TenantId }
 Connect-MgGraph @connectParams -NoWelcome
 #endregion
@@ -41,8 +41,8 @@ $allRuns  = [System.Collections.Generic.List[object]]::new()
 $nextUri  = $baseUri + $expand
 
 do {
-    $page = Invoke-MgGraphRequest -Method GET -Uri $nextUri
-    $allRuns.AddRange([object[]]$page.value)
+    $page    = Invoke-MgGraphRequest -Method GET -Uri $nextUri -ErrorAction Stop
+    if ($page.value) { $allRuns.AddRange([object[]]$page.value) }
     $nextUri = $page.'@odata.nextLink'
 } while ($nextUri)
 
