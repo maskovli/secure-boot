@@ -18,6 +18,44 @@
       KEK 2023             : 459AB6FB5E284D272D5E3E6ABC8ED663829D632B (KEK)
 #>
 
+#region — Aktiver SeSystemEnvironmentPrivilege (påkrevd for Get-SecureBootUEFI som SYSTEM via IME)
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public class UEFIPrivilege {
+    [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
+    static extern bool AdjustTokenPrivileges(IntPtr htok, bool disall,
+        ref TokPriv1Luid newst, int len, IntPtr prev, IntPtr relen);
+
+    [DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
+    static extern bool OpenProcessToken(IntPtr h, int acc, ref IntPtr phtok);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool LookupPrivilegeValue(string host, string name, ref long pluid);
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    struct TokPriv1Luid { public int Count; public long Luid; public int Attr; }
+
+    const int SE_PRIVILEGE_ENABLED  = 0x00000002;
+    const int TOKEN_QUERY            = 0x00000008;
+    const int TOKEN_ADJUST_PRIVILEGES = 0x00000020;
+
+    public static bool Enable(string privilege) {
+        TokPriv1Luid tp;
+        IntPtr htok = IntPtr.Zero;
+        OpenProcessToken(System.Diagnostics.Process.GetCurrentProcess().Handle,
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, ref htok);
+        tp.Count = 1; tp.Luid = 0; tp.Attr = SE_PRIVILEGE_ENABLED;
+        LookupPrivilegeValue(null, privilege, ref tp.Luid);
+        return AdjustTokenPrivileges(htok, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+    }
+}
+'@ -ErrorAction SilentlyContinue
+
+[UEFIPrivilege]::Enable('SeSystemEnvironmentPrivilege') | Out-Null
+#endregion
+
 #region — Helper: parse UEFI EFI_SIGNATURE_LIST and extract X509 certs
 function Get-UEFIDBCertificates {
     param([string]$Variable)
