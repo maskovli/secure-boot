@@ -13,9 +13,9 @@
     {
       "@odata.type": "#microsoft.graph.omaSettingInteger",
       "displayName": "Require Platform Security Features",
-      "description": "3 = Secure Boot + DMA Protection. 1 = Secure Boot only.",
+      "description": "1 = Secure Boot only (anbefalt default — DMA/IOMMU ikke tilgjengelig på alle enheter). 3 = Secure Boot + DMA Protection (kun hvis AvailableSecurityProperties inneholder verdi 3).",
       "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceGuard/RequirePlatformSecurityFeatures",
-      "value": 3
+      "value": 1
     },
     {
       "@odata.type": "#microsoft.graph.omaSettingInteger",

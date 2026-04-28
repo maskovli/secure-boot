@@ -1,0 +1,21 @@
+{
+  "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
+  "displayName": "WIN11-SEC-Secure Boot Certificate Update 2023",
+  "description": "Deployer Windows UEFI CA 2023 og KEK 2K CA 2023 Secure Boot-sertifikater. Påkrevd før 2011-sertifikatene utgår juni 2026. Ref: Policy CSP SecureBoot/EnableSecurebootCertificateUpdates.",
+  "omaSettings": [
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "Enable Secure Boot Certificate Updates (2023 CA)",
+      "description": "Verdi 22852 = Enabled. Installerer Windows UEFI CA 2023 og oppdatert boot manager signert med 2023-sertifikatet. Krever reboot for å tre i kraft. Devices med SecureBoot=false påvirkes ikke.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/SecureBoot/EnableSecurebootCertificateUpdates",
+      "value": 22852
+    },
+    {
+      "@odata.type": "#microsoft.graph.omaSettingInteger",
+      "displayName": "High Confidence Opt-Out (behold automatisk utrulling)",
+      "description": "Verdi 0 = Default. Enheter som Microsoft har validert (høy tillit) mottar sertifikatoppdateringen automatisk via månedlig LCU. Sett til 1 for å stoppe automatisk utrulling og kun bruke manuell policy.",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/SecureBoot/ConfigureHighConfidenceOptOut",
+      "value": 0
+    }
+  ]
+}
