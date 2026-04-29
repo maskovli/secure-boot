@@ -1,88 +1,87 @@
 // =====================================================================
-// CMPivot query - Secure Boot certificate inventory
+// CMPivot query pack - Secure Boot certificate inventory
 // =====================================================================
 // Author      : Marius Skovli
 // Date        : 26.02.2026
-// Version     : 1.1
+// Version     : 1.2
 // Target      : Server collection that has the Secure Boot CI deployed
 // Prerequisite: Detect-SecureBootInventory-CI.ps1 has run at least once on
 //               each target (it populates HKLM:\SOFTWARE\SecureBootInventory)
 //
-// Important - CMPivot uses a SUBSET of KQL
-// ----------------------------------------
-// CMPivot does NOT support anyif(), arg_max(), pivot, or full joins.
-// The queries below use only CMPivot-compatible operators:
-//   where, project, extend, summarize, order, sort, top, limit
-//   count(), countif(), dcount(), max(), min()
+// HOW TO USE
+// ----------
+// CMPivot accepts ONE query at a time. Each block below is independent
+// and ready to paste - select the lines between two header bars and
+// copy them into the CMPivot query window.
 //
-// Each query block below is INDEPENDENT - paste exactly one block into
-// CMPivot at a time, do not paste the whole file. CMPivot expects a
-// single query per Run.
+// CMPivot uses a SUBSET of KQL: anyif(), arg_max(), pivot, and full
+// joins are NOT supported. Only basic operators are used here.
 // =====================================================================
 
 
-// ---------------------------------------------------------------------
+// =====================================================================
 // Query 1 - Per-device CertStatus (most common use)
 // Returns one row per device with the CertStatus value
-// ---------------------------------------------------------------------
+// =====================================================================
 Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
 | where Property == 'CertStatus'
 | project Device, CertStatus = Value
 | order by CertStatus asc, Device asc
 
 
-// ---------------------------------------------------------------------
+// =====================================================================
 // Query 2 - Group counts by CertStatus (executive summary)
-// ---------------------------------------------------------------------
-// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
-// | where Property == 'CertStatus'
-// | summarize Count = count() by Value
-// | project CertStatus = Value, Count
-// | order by Count desc
+// =====================================================================
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Property == 'CertStatus'
+| summarize Count = count() by Value
+| project CertStatus = Value, Count
+| order by Count desc
 
 
-// ---------------------------------------------------------------------
+// =====================================================================
 // Query 3 - Servers that need the 2023 cert update (action list)
-// ---------------------------------------------------------------------
-// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
-// | where Property == 'CertStatus' and Value == 'NeedsUpdate'
-// | project Device
+// =====================================================================
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Property == 'CertStatus' and Value == 'NeedsUpdate'
+| project Device
 
 
-// ---------------------------------------------------------------------
+// =====================================================================
 // Query 4 - Servers running Legacy BIOS (CertStatus = NotApplicable)
 // These are firmware-conversion candidates, not cert-update candidates
-// ---------------------------------------------------------------------
-// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
-// | where Property == 'FirmwareType' and Value == 'Legacy'
-// | project Device
+// =====================================================================
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Property == 'FirmwareType' and Value == 'Legacy'
+| project Device
 
 
-// ---------------------------------------------------------------------
+// =====================================================================
 // Query 5 - All inventory properties for a single device
 // Useful when verifying which specific cert is missing on a host.
 // Replace 'SRV-NAME' with the actual computer name.
-// ---------------------------------------------------------------------
-// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
-// | where Device == 'SRV-NAME'
-// | project Property, Value
-// | order by Property asc
+// =====================================================================
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Device == 'SRV-NAME'
+| project Property, Value
+| order by Property asc
 
 
-// ---------------------------------------------------------------------
-// Query 6 - Count of devices missing each specific 2023 cert
-// (run individually, then compare results)
-// ---------------------------------------------------------------------
-// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
-// | where Property == 'DB_Has2023Cert' and Value == '0'
-// | summarize MissingDB2023 = count()
+// =====================================================================
+// Query 6 - Count of devices missing the 2023 db certificate
+// Re-run with DB_Has2011Cert / KEK_Has2023Cert / KEK_Has2011Cert to
+// build a complete missing-cert breakdown.
+// =====================================================================
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Property == 'DB_Has2023Cert' and Value == '0'
+| summarize MissingDB2023 = count()
 
 
-// ---------------------------------------------------------------------
+// =====================================================================
 // Query 7 - Last evaluation timestamp per device
-// Find devices where the CI has not run recently (broken/disconnected)
-// ---------------------------------------------------------------------
-// Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
-// | where Property == 'LastEvaluation'
-// | project Device, LastEvaluation = Value
-// | order by LastEvaluation asc
+// Find devices where the CI has not run recently (broken / disconnected)
+// =====================================================================
+Registry('HKEY_LOCAL_MACHINE\\SOFTWARE\\SecureBootInventory')
+| where Property == 'LastEvaluation'
+| project Device, LastEvaluation = Value
+| order by LastEvaluation asc
