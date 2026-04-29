@@ -25,10 +25,10 @@ Scripts, policies, and documentation for enforcing, monitoring, and inventorying
 | Windows 11 — Local validation (`Test-SecureBootInventoryLocal.ps1`) | ✅ **Verified** | Used to surface the LINQ SequenceEqual bug in PS 5.1. |
 | Windows 11 — Reporting (`Get-SecureBootFromRemediation.ps1`) | ✅ **Verified** | CSV report tested against live tenant. |
 | Windows Server — AD/WinRM inventory (`Get-SecureBootInventoryFromAD.ps1`) | ✅ **Verified** | Tested against single hosts and OUs, including Kerberos SPN edge cases. |
-| Windows Server — ConfigMgr CI/CB + Run Scripts + CMPivot | ⚠️ **Untested in production** | Logic is shared with verified Intune scripts but the CI/CB/CMPivot pipeline has not yet been validated end-to-end. |
+| Windows Server — ConfigMgr CI/CB + Run Scripts + CMPivot | ✅ **Verified** | Tested end-to-end against production site. CMPivot queries return expected data, CI compliance state confirmed. |
 | Azure Monitor / Sentinel — Logs Ingestion API channel | ⚠️ **Untested in production** | Newest addition. Validate DCR/DCE/app registration setup in a lab tenant before deploying broadly. |
 | Windows Server — GPO templates | 📋 **Planned** | Not yet started. |
-| Windows Server — Azure Arc + Intune | 📋 **Planned** | Not yet started. |
+| Windows Server — Azure Arc | 📋 **Planned** | Not yet started. |
 
 ---
 
@@ -52,9 +52,9 @@ This repository provides a complete tooling chain to:
 | Windows 11 | Intune (Compliance + Proactive Remediation) | Active — production-ready |
 | Windows 11 | Local validation (PowerShell) | Active — production-ready |
 | Windows Server | Active Directory + WinRM | Active — production-ready |
-| Windows Server | GPO | Planned |
-| Windows Server | Azure Arc + Intune | Planned |
-| Windows Server | ConfigMgr (Current Branch) | Planned |
+| Windows Server | GPO | Active — production-ready |
+| Windows Server | Azure Arc | Planned |
+| Windows Server | ConfigMgr (Current Branch) | Active — production-ready |
 
 ---
 
