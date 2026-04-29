@@ -3,6 +3,18 @@
 > **Author:** Marius Skovli
 > **Created:** 28.02.2026
 > **Last updated:** 28.02.2026
+> **Status:** ⚠️ **Untested in production** — see warning below
+
+> [!WARNING]
+> **The ConfigMgr CI/CB, Run Scripts, CMPivot, and reporting components have not yet been validated end-to-end** against a live ConfigMgr Current Branch site. The PowerShell discovery and inventory logic reuses the byte-parser that has been verified in the Intune and AD/WinRM channels, but the CI compliance rule, Hardware Inventory class extension, and SMS Provider WMI queries have not been exercised yet.
+>
+> Treat everything in this folder as **beta / reference design** until you have:
+> 1. Imported the CI, wrapped it in a CB, and deployed to a pilot collection
+> 2. Confirmed the CB returns Compliant for a known-good host
+> 3. (Optional) Extended Hardware Inventory and verified `SMS_G_System_SECUREBOOTINVENTORY` populates
+> 4. Validated the reporting script returns expected data
+>
+> Report issues or schema mismatches via a GitHub issue.
 
 Tooling for inventorying Secure Boot certificate state across a ConfigMgr-managed server estate, focused on the **June 2026 expiry of the Microsoft UEFI 2011 certificates**.
 

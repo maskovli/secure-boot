@@ -1,13 +1,34 @@
 # Secure Boot
 
-Scripts, policies, and documentation for enforcing, monitoring, and inventorying Secure Boot across Windows 11 and Windows Server estates — covering Intune, Active Directory, GPO, Azure Arc, and ConfigMgr.
+Scripts, policies, and documentation for enforcing, monitoring, and inventorying Secure Boot across Windows 11 and Windows Server estates — covering Intune, Active Directory, GPO, Azure Arc, ConfigMgr, and Microsoft Sentinel.
 
 > **Author:** Marius Skovli
 > **Created:** 15.01.2026
-> **Last updated:** 24.02.2026
+> **Last updated:** 16.03.2026
+> **License:** [MIT](LICENSE)
+
+> [!IMPORTANT]
+> **Use at your own risk.** This software is provided "AS IS", without warranty of any kind. The author accepts no liability for any damage, data loss, downtime, or other consequence arising from use of these scripts or documentation. See [LICENSE](LICENSE) for the full legal text.
+>
+> Several scripts in this repository run with elevated privileges, modify the registry, send data to cloud services, or interact with firmware variables. **Always test in a non-production pilot group before broad deployment.**
 
 > [!NOTE]
-> Active development is currently focused on **Windows 11 + Intune** and **Windows Server inventory via AD/WinRM**. ConfigMgr and Azure Arc coverage is being added incrementally.
+> Active development is currently focused on **Windows 11 + Intune** and **Windows Server inventory via AD/WinRM**. ConfigMgr, Azure Monitor / Sentinel, and Azure Arc coverage is being added incrementally — see the maturity table below.
+
+---
+
+## Component Maturity
+
+| Component | Status | Notes |
+|---|---|---|
+| Windows 11 — Intune Compliance + Proactive Remediation (cert inventory) | ✅ **Verified** | Tested end-to-end against production tenant. CertStatus = UpToDate confirmed. |
+| Windows 11 — Local validation (`Test-SecureBootInventoryLocal.ps1`) | ✅ **Verified** | Used to surface the LINQ SequenceEqual bug in PS 5.1. |
+| Windows 11 — Reporting (`Get-SecureBootFromRemediation.ps1`) | ✅ **Verified** | CSV report tested against live tenant. |
+| Windows Server — AD/WinRM inventory (`Get-SecureBootInventoryFromAD.ps1`) | ✅ **Verified** | Tested against single hosts and OUs, including Kerberos SPN edge cases. |
+| Windows Server — ConfigMgr CI/CB + Run Scripts + CMPivot | ⚠️ **Untested in production** | Logic is shared with verified Intune scripts but the CI/CB/CMPivot pipeline has not yet been validated end-to-end. |
+| Azure Monitor / Sentinel — Logs Ingestion API channel | ⚠️ **Untested in production** | Newest addition. Validate DCR/DCE/app registration setup in a lab tenant before deploying broadly. |
+| Windows Server — GPO templates | 📋 **Planned** | Not yet started. |
+| Windows Server — Azure Arc + Intune | 📋 **Planned** | Not yet started. |
 
 ---
 
@@ -124,4 +145,4 @@ Pull requests and issues welcome. Scripts should be idempotent, ASCII-safe (Powe
 
 ## License
 
-MIT
+Released under the [MIT License](LICENSE) — including the standard "AS IS" warranty disclaimer. See [LICENSE](LICENSE) for the full text.

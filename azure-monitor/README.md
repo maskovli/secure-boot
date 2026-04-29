@@ -3,6 +3,17 @@
 > **Author:** Marius Skovli
 > **Created:** 16.03.2026
 > **Last updated:** 16.03.2026
+> **Status:** ⚠️ **Untested in production** — see warning below
+
+> [!WARNING]
+> **This integration has not yet been validated end-to-end against a live Log Analytics workspace.** The PowerShell payload reuses the same byte-parser and certificate-detection logic that has been verified in the Intune Proactive Remediation channel, but the DCE/DCR/app-registration pipeline and the KQL queries have not been exercised on real ingested data yet.
+>
+> Treat everything in this folder as **beta / reference design** until you have:
+> 1. Created the workspace, custom table, DCE, DCR, and app registration in a non-production tenant
+> 2. Confirmed at least one record arrives in `SecureBootInventory_CL` with the expected schema
+> 3. Validated each KQL query block against that data
+>
+> Report issues or schema mismatches via a GitHub issue.
 
 Fourth delivery channel for Secure Boot certificate inventory: ship the same per-device data from **Intune-managed Windows 11 devices** to a **Log Analytics workspace** so it can be queried, alerted on, and visualized in **Microsoft Sentinel**.
 
