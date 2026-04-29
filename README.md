@@ -51,10 +51,10 @@ This repository provides a complete tooling chain to:
 |---|---|---|
 | Windows 11 | Intune (Compliance + Proactive Remediation) | Active — production-ready |
 | Windows 11 | Local validation (PowerShell) | Active — production-ready |
-| Windows Server 2016+ | Active Directory + WinRM | Active — production-ready |
-| Windows Server 2022/2025 | GPO | Planned |
-| Windows Server 2022/2025 | Azure Arc + Intune | Planned |
-| Windows Server 2019+ | ConfigMgr (Current Branch) | Planned |
+| Windows Server | Active Directory + WinRM | Active — production-ready |
+| Windows Server | GPO | Planned |
+| Windows Server | Azure Arc + Intune | Planned |
+| Windows Server | ConfigMgr (Current Branch) | Planned |
 
 ---
 
