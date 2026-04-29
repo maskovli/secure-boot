@@ -53,18 +53,40 @@ public class UEFIPrivilege {
 }
 '@ -ErrorAction SilentlyContinue
 
-[UEFIPrivilege]::Enable('SeSystemEnvironmentPrivilege') | Out-Null
+$script:PrivilegeEnableResult = $null
+try {
+    $script:PrivilegeEnableResult = [UEFIPrivilege]::Enable('SeSystemEnvironmentPrivilege')
+}
+catch {
+    $script:PrivilegeEnableResult = "Exception: $($_.Exception.Message)"
+}
 #endregion
 
 #region — Helper: parse UEFI EFI_SIGNATURE_LIST and extract X509 certs
+$script:UEFIQueryErrors = @{}
+$script:UEFIQueryBytes  = @{}
+
+function Test-ByteArrayEqual {
+    param([byte[]]$A, [byte[]]$B)
+    if ($A.Length -ne $B.Length) { return $false }
+    for ($i = 0; $i -lt $A.Length; $i++) {
+        if ($A[$i] -ne $B[$i]) { return $false }
+    }
+    return $true
+}
+
 function Get-UEFIDBCertificates {
     param([string]$Variable)
 
     try {
         $uefiVar = Get-SecureBootUEFI -Name $Variable -ErrorAction Stop
         $bytes   = $uefiVar.Bytes
+        $script:UEFIQueryBytes[$Variable] = $bytes.Length
     }
-    catch { return @() }
+    catch {
+        $script:UEFIQueryErrors[$Variable] = $_.Exception.Message
+        return @()
+    }
 
     # EFI_CERT_X509_GUID = {a5c059a1-94e4-4aa7-87b5-ab155c2bf072}
     $x509Guid = [byte[]](0xa1,0x59,0xc0,0xa5,0xe4,0x94,0xa7,0x4a,0x87,0xb5,0xab,0x15,0x5c,0x2b,0xf0,0x72)
@@ -73,14 +95,14 @@ function Get-UEFIDBCertificates {
     $offset = 0
 
     while ($offset + 28 -le $bytes.Length) {
-        $sigTypeGuid = $bytes[$offset..($offset + 15)]
+        $sigTypeGuid = [byte[]]($bytes[$offset..($offset + 15)])
         $sigListSize = [BitConverter]::ToUInt32($bytes, $offset + 16)
         $sigHdrSize  = [BitConverter]::ToUInt32($bytes, $offset + 20)
         $sigSize     = [BitConverter]::ToUInt32($bytes, $offset + 24)
 
         if ($sigListSize -eq 0) { break }
 
-        if ([System.Linq.Enumerable]::SequenceEqual($sigTypeGuid, $x509Guid)) {
+        if (Test-ByteArrayEqual -A $sigTypeGuid -B $x509Guid) {
             $sigOffset = $offset + 28 + $sigHdrSize
             $listEnd   = $offset + $sigListSize
 
@@ -192,6 +214,17 @@ $data.Manufacturer = $cs.Manufacturer
 $data.Model        = $cs.Model
 $data.SerialNumber = $bios.SerialNumber
 $data.CollectedAt  = (Get-Date -Format 'o')
+#endregion
+
+#region — Diagnostikk (for å feilsøke hvorfor cert-data mangler)
+$data.Diag_PrivilegeEnableResult = "$script:PrivilegeEnableResult"
+$data.Diag_DBQueryError          = $script:UEFIQueryErrors['db']
+$data.Diag_KEKQueryError         = $script:UEFIQueryErrors['KEK']
+$data.Diag_DBBytes               = $script:UEFIQueryBytes['db']
+$data.Diag_KEKBytes              = $script:UEFIQueryBytes['KEK']
+$data.Diag_PSVersion             = $PSVersionTable.PSVersion.ToString()
+$data.Diag_WhoAmI                = try { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name } catch { 'unknown' }
+$data.Diag_Is64Bit               = [Environment]::Is64BitProcess
 #endregion
 
 $data | ConvertTo-Json -Compress

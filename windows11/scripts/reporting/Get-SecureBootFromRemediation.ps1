@@ -90,6 +90,14 @@ $report = foreach ($run in $allRuns) {
         SerialNumber        = $parsed.SerialNumber
         CollectedAt         = $parsed.CollectedAt
         AzureADDeviceId     = $run.managedDevice.azureADDeviceId
+        # Diagnostikk
+        Diag_Privilege      = $parsed.Diag_PrivilegeEnableResult
+        Diag_DBError        = $parsed.Diag_DBQueryError
+        Diag_KEKError       = $parsed.Diag_KEKQueryError
+        Diag_DBBytes        = $parsed.Diag_DBBytes
+        Diag_KEKBytes       = $parsed.Diag_KEKBytes
+        Diag_WhoAmI         = $parsed.Diag_WhoAmI
+        Diag_Is64Bit        = $parsed.Diag_Is64Bit
         RawOutput           = if (-not $parsed) { $run.preRemediationDetectionScriptOutput } else { $null }
     }
 }
